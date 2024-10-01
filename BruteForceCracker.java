@@ -63,7 +63,7 @@ public class BruteForceCracker {
     }
 
     public static void main(String[] args) throws Exception {
-        String inputFile = "/Users/zohebhasan/Downloads/sample_100_pass.csv";
+        String inputFile = "./test.csv";
         String outputFile = "task1.csv";
     
         // Step 1: Read the input CSV
