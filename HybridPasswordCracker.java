@@ -1,3 +1,4 @@
+
 import java.io.*;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
@@ -39,71 +40,63 @@ public class HybridPasswordCracker {
 
     // Hybrid password cracker (multithreaded)
     private static String crackHybridPassword(String salt, String targetHash) throws NoSuchAlgorithmException {
-        ExecutorService executor = Executors.newFixedThreadPool(THREAD_COUNT);
-
-        // Submit tasks for each dictionary word
-        List<Future<String>> results = new ArrayList<>();
+        // Loop through all passwords in the dictionary
         for (String password : dictionary) {
-            Future<String> result = executor.submit(() -> {
-                // Try original and transformed passwords
-                return tryAllTransformations(password, salt, targetHash);
-            });
-            results.add(result);
-        }
-
-        // Wait for results
-        for (Future<String> result : results) {
-            try {
-                String crackedPassword = result.get();
-                if (crackedPassword != null) {
-                    executor.shutdown();
-                    return crackedPassword;
-                }
-            } catch (Exception e) {
-                e.printStackTrace();
+            // Try all transformations for the current password and check real-time
+            String crackedPassword = tryAllTransformationsRealTime(password, salt, targetHash);
+            if (crackedPassword != null) {
+                return crackedPassword;  // Return the password if found
             }
         }
-
-        executor.shutdown();
-        return null;
+        return null;  // No password matched the hash
     }
 
-    private static String tryAllTransformations(String password, String salt, String targetHash) throws NoSuchAlgorithmException {
+    private static String tryAllTransformationsRealTime(String password, String salt, String targetHash) throws NoSuchAlgorithmException {
         // Try the original password
         if (checkPassword(password, salt, targetHash)) {
             return password;
         }
 
-        // Try all combinations of transformations
-        List<String> variations = applyAllTransformations(password);
-        for (String variation : variations) {
-            if (checkPassword(variation, salt, targetHash)) {
-                return variation;
+        // Apply transformations one by one and check real-time
+        // Step 1: Digits only
+        for (String passWithDigits : applyRandomDigitsRealTime(password)) {
+            if (checkPassword(passWithDigits, salt, targetHash)) {
+                return passWithDigits;
+            }
+
+            // Step 2: Case randomization + digits
+            for (String caseTransformed : randomizeCasesRealTime(passWithDigits)) {
+                if (checkPassword(caseTransformed, salt, targetHash)) {
+                    return caseTransformed;
+                }
+
+                // Step 3: Swap letters + case randomization + digits
+                for (String swapped : swapLettersRealTime(caseTransformed)) {
+                    if (checkPassword(swapped, salt, targetHash)) {
+                        return swapped;
+                    }
+                }
+            }
+        }
+
+        // Step 4: Swap letters only
+        for (String swapped : swapLettersRealTime(password)) {
+            if (checkPassword(swapped, salt, targetHash)) {
+                return swapped;
+            }
+
+            // Case + swap letters
+            for (String caseTransformed : randomizeCasesRealTime(swapped)) {
+                if (checkPassword(caseTransformed, salt, targetHash)) {
+                    return caseTransformed;
+                }
             }
         }
 
         return null;
     }
 
-    // Apply all transformations: add digits, randomize case, swap letters
-    private static List<String> applyAllTransformations(String password) {
-        List<String> transformedPasswords = new ArrayList<>();
-
-        // Add all digit combinations
-        transformedPasswords.addAll(applyRandomDigits(password));
-
-        // For each variation with digits, apply case randomization and swaps
-        List<String> tempPasswords = new ArrayList<>(transformedPasswords);
-        for (String pass : tempPasswords) {
-            transformedPasswords.addAll(randomizeCases(pass));
-            transformedPasswords.addAll(swapLetters(pass));
-        }
-
-        return transformedPasswords;
-    }
-
-    // Generate all combinations of digits from 0-9999 appended to the password
-    private static List<String> applyRandomDigits(String password) {
+    private static Iterable<String> applyRandomDigitsRealTime(String password) {
         List<String> variations = new ArrayList<>();
         for (int i = 0; i <= 9999; i++) {
             variations.add(password + String.format("%04d", i));  // Pad numbers to ensure 4 digits
@@ -111,8 +104,7 @@ public class HybridPasswordCracker {
         return variations;
     }
 
-    // Randomize the case for every possible letter combination
-    private static List<String> randomizeCases(String password) {
+    private static Iterable<String> randomizeCasesRealTime(String password) {
         List<String> results = new ArrayList<>();
         int length = password.length();
         int combinations = 1 << length;  // 2^length combinations for case changes
@@ -128,49 +120,40 @@ public class HybridPasswordCracker {
             }
             results.add(sb.toString());
         }
-
         return results;
     }
 
-    // Swap letters 'e', 'o', 't' with '3', '0', '7' and try all combinations
-    private static List<String> swapLetters(String password) {
+    private static Iterable<String> swapLettersRealTime(String password) {
         List<String> results = new ArrayList<>();
-        swapRecursive(password.toCharArray(), 0, results);
+        results.add(password);  // Start with the original password
+
+        for (int i = 0; i < password.length(); i++) {
+            int currentSize = results.size();
+
+            for (int j = 0; j < currentSize; j++) {
+                char[] chars = results.get(j).toCharArray();
+                switch (chars[i]) {
+                    case 'e':
+                        chars[i] = '3';
+                        results.add(new String(chars));
+                        chars[i] = 'e';
+                        break;
+                    case 'o':
+                        chars[i] = '0';
+                        results.add(new String(chars));
+                        chars[i] = 'o';
+                        break;
+                    case 't':
+                        chars[i] = '7';
+                        results.add(new String(chars));
+                        chars[i] = 't';
+                        break;
+                }
+            }
+        }
         return results;
     }
 
-    // Recursive function to generate all combinations of letter swaps
-    private static void swapRecursive(char[] password, int index, List<String> results) {
-        if (index == password.length) {
-            results.add(new String(password));
-            return;
-        }
-
-        char currentChar = password[index];
-        switch (currentChar) {
-            case 'e':
-                password[index] = '3';
-                swapRecursive(password, index + 1, results);
-                password[index] = 'e';  // Backtrack
-                break;
-            case 'o':
-                password[index] = '0';
-                swapRecursive(password, index + 1, results);
-                password[index] = 'o';  // Backtrack
-                break;
-            case 't':
-                password[index] = '7';
-                swapRecursive(password, index + 1, results);
-                password[index] = 't';  // Backtrack
-                break;
-            default:
-                break;
-        }
-        // Try the current character as is
-        swapRecursive(password, index + 1, results);
-    }
-
-    // Check if the password (or its variation) matches the hash
     private static boolean checkPassword(String password, String salt, String targetHash) throws NoSuchAlgorithmException {
         String saltedPassword = password + salt;
         String hash = md5Hash(saltedPassword);
@@ -214,31 +197,45 @@ public class HybridPasswordCracker {
             return;
         }
 
-        int availableProcessors = Runtime.getRuntime().availableProcessors();
-        int threadCount = Math.max(2, availableProcessors / 2);  
-        System.out.println("Using " + threadCount + " threads for execution.");
-
-
         System.out.println("File read successfully. Found " + users.size() + " users and " + dictionary.size() + " dictionary passwords");
 
+        int availableProcessors = Runtime.getRuntime().availableProcessors();
+        int threadCount = Math.max(2, availableProcessors / 2);
+        System.out.println("Using " + threadCount + " threads for execution.");
+
+        ExecutorService executorService = Executors.newFixedThreadPool(threadCount);
+        List<Future<String[]>> results = new ArrayList<>();
+
+        long startTime = System.currentTimeMillis();
+
+        for (String[] user : users) {
+            String username = user[0];
+            String hash = user[1];
+            String salt = user.length > 2 ? user[2] : "";
+
+            Future<String[]> future = executorService.submit(() -> {
+                String crackedPassword = crackHybridPassword(salt, hash);
+                return new String[]{username, crackedPassword != null ? crackedPassword : "FAILED"};
+            });
+
+            results.add(future);
+        }
+
         try (PrintWriter writer = new PrintWriter(new File("task5.csv"))) {
-            long startTime = System.currentTimeMillis();
             int successCount = 0;
 
-            for (String[] user : users) {
-                String username = user[0];
-                String hashedPass = user[1];
-                String salt = user.length > 2 ? user[2] : "";
+            for (Future<String[]> result : results) {
+                String[] userResult = result.get();
+                String username = userResult[0];
+                String crackedPassword = userResult[1];
 
-                String crackedPassword = crackHybridPassword(salt, hashedPass);
+                writer.println(username + "," + crackedPassword);
 
-                if (crackedPassword != null) {
+                if (!crackedPassword.equals("FAILED")) {
                     System.out.println(username + ": " + crackedPassword);
-                    writer.println(username + "," + crackedPassword);
                     successCount++;
                 } else {
                     System.out.println(username + ": FAILED");
-                    writer.println(username + ",FAILED");
                 }
             }
 
@@ -251,6 +248,7 @@ public class HybridPasswordCracker {
             System.out.println("Finished cracking. Total time: " + totalTime + " seconds. Success rate: " + successRate + "%");
         }
 
+        executorService.shutdown();
         stdin.close();
     }
 }
