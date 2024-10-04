@@ -10,66 +10,6 @@ public class SaltedPasswordCracker {
     private static List<String[]> users = new ArrayList<>();
     private static List<String> dictionary = new ArrayList<>();
 
-    public static void main(String[] args) throws Exception {
-        Scanner stdin = new Scanner(System.in);
-
-        System.out.print("Please enter your file directory for salted passwords: ");
-        String inputFile = stdin.nextLine();
-
-        System.out.print("Please enter your file directory for the common password list: ");
-        String dictionaryFile = stdin.nextLine();
-
-        System.out.println("Reading salted password file: " + inputFile);
-        readInputFile(inputFile);
-
-        System.out.println("Reading dictionary file: " + dictionaryFile);
-        readDictionaryFile(dictionaryFile);
-
-        if (users.isEmpty()) {
-            System.out.println("No users found in the file. Exiting.");
-            return;
-        }
-
-        if (dictionary.isEmpty()) {
-            System.out.println("No passwords have been found in the dictionary. Exiting");
-            return;
-        }
-
-        System.out.println("File read successfully. Found " + users.size() + " users and " + dictionary.size() + " common passwords");
-
-        try (PrintWriter writer = new PrintWriter(new File("task4.csv"))) {
-            long startTime = System.currentTimeMillis();
-            int successCount = 0;
-
-            for (String[] user : users) {
-                String username = user[0];
-                String hashedPass = user[1];  
-                String salt = user[2]; 
-                // System.out.println("Processing user: " + username + " and the hashed pass is: " + hashedPass + " with salt: " + salt);
-
-                String crackedPassword = crackSaltedPassword(salt, hashedPass);
-
-                if (crackedPassword != null) {
-                    System.out.println(username + ": " + crackedPassword);
-                    writer.println(username + "," + crackedPassword);
-                    successCount++;
-                } else {
-                    System.out.println(username + ": FAILED");
-                    writer.println(username + ",FAILED");
-                }
-            }
-
-            long totalTime = (System.currentTimeMillis() - startTime) / 1000;
-            double successRate = (double) successCount / users.size() * 100;
-
-            writer.println("TOTALTIME," + totalTime);
-            writer.println("SUCCESSRATE," + String.format("%.2f%%", successRate));
-
-            System.out.println("Finished cracking. Total time: " + totalTime + " seconds. Success rate: " + successRate + "%");
-        }
-
-        stdin.close();
-    }
 
     private static void readInputFile(String fileName) throws IOException {
         BufferedReader reader = new BufferedReader(new FileReader(fileName));
@@ -114,4 +54,67 @@ public class SaltedPasswordCracker {
         }
         return sb.toString();
     }
+
+
+    public static void main(String[] args) throws Exception {
+
+        if (args.length == 0) {
+            System.out.println("Please provide an input file directory.");
+            return;
+        }
+
+        String inputFile = args[0];
+        String dictionaryFile = "./dictionary.csv";
+        String outputFile = "task4.csv";
+
+        System.out.println("Reading salted password file: " + inputFile);
+        readInputFile(inputFile);
+
+        System.out.println("Reading dictionary file: " + dictionaryFile);
+        readDictionaryFile(dictionaryFile);
+
+        if (users.isEmpty()) {
+            System.out.println("No users found in the file. Exiting.");
+            return;
+        }
+
+        if (dictionary.isEmpty()) {
+            System.out.println("No passwords have been found in the dictionary. Exiting");
+            return;
+        }
+
+        System.out.println("File read successfully. Found " + users.size() + " users and " + dictionary.size() + " common passwords");
+
+        try (PrintWriter writer = new PrintWriter(new File(outputFile))) {
+            long startTime = System.currentTimeMillis();
+            int successCount = 0;
+
+            for (String[] user : users) {
+                String username = user[0];
+                String hashedPass = user[1];  
+                String salt = user[2]; 
+                // System.out.println("Processing user: " + username + " and the hashed pass is: " + hashedPass + " with salt: " + salt);
+
+                String crackedPassword = crackSaltedPassword(salt, hashedPass);
+
+                if (crackedPassword != null) {
+                    System.out.println(username + ": " + crackedPassword);
+                    writer.println(username + "," + crackedPassword);
+                    successCount++;
+                } else {
+                    System.out.println(username + ": FAILED");
+                    writer.println(username + ",FAILED");
+                }
+            }
+
+            long totalTime = (System.currentTimeMillis() - startTime) / 1000;
+            double successRate = (double) successCount / users.size() * 100;
+
+            writer.println("TOTALTIME," + totalTime);
+            writer.println("SUCCESSRATE," + String.format("%.2f%%", successRate));
+
+            System.out.println("Finished cracking. Total time: " + totalTime + " seconds. Success rate: " + successRate + "%");
+        }
+    }
+
 }

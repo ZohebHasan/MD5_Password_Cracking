@@ -12,9 +12,7 @@ public class HybridPasswordCracker {
 
     private static List<String[]> users = new ArrayList<>();
     private static List<String> dictionary = new ArrayList<>();
-    private static final int THREAD_COUNT = Runtime.getRuntime().availableProcessors();
 
-    // Read user info (e.g., username, hashed password, salt)
     private static void readInputFile(String fileName) throws IOException {
         BufferedReader reader = new BufferedReader(new FileReader(fileName));
         String line;
@@ -28,7 +26,6 @@ public class HybridPasswordCracker {
         reader.close();
     }
 
-    // Read dictionary of common passwords
     private static void readDictionaryFile(String fileName) throws IOException {
         BufferedReader reader = new BufferedReader(new FileReader(fileName));
         String line;
@@ -38,39 +35,31 @@ public class HybridPasswordCracker {
         reader.close();
     }
 
-    // Hybrid password cracker (multithreaded)
     private static String crackHybridPassword(String salt, String targetHash) throws NoSuchAlgorithmException {
-        // Loop through all passwords in the dictionary
         for (String password : dictionary) {
-            // Try all transformations for the current password and check real-time
             String crackedPassword = tryAllTransformationsRealTime(password, salt, targetHash);
             if (crackedPassword != null) {
-                return crackedPassword;  // Return the password if found
+                return crackedPassword;
             }
         }
-        return null;  // No password matched the hash
+        return null;
     }
 
     private static String tryAllTransformationsRealTime(String password, String salt, String targetHash) throws NoSuchAlgorithmException {
-        // Try the original password
         if (checkPassword(password, salt, targetHash)) {
             return password;
         }
 
-        // Apply transformations one by one and check real-time
-        // Step 1: Digits only
         for (String passWithDigits : applyRandomDigitsRealTime(password)) {
             if (checkPassword(passWithDigits, salt, targetHash)) {
                 return passWithDigits;
             }
 
-            // Step 2: Case randomization + digits
             for (String caseTransformed : randomizeCasesRealTime(passWithDigits)) {
                 if (checkPassword(caseTransformed, salt, targetHash)) {
                     return caseTransformed;
                 }
 
-                // Step 3: Swap letters + case randomization + digits
                 for (String swapped : swapLettersRealTime(caseTransformed)) {
                     if (checkPassword(swapped, salt, targetHash)) {
                         return swapped;
@@ -79,13 +68,11 @@ public class HybridPasswordCracker {
             }
         }
 
-        // Step 4: Swap letters only
         for (String swapped : swapLettersRealTime(password)) {
             if (checkPassword(swapped, salt, targetHash)) {
                 return swapped;
             }
 
-            // Case + swap letters
             for (String caseTransformed : randomizeCasesRealTime(swapped)) {
                 if (checkPassword(caseTransformed, salt, targetHash)) {
                     return caseTransformed;
@@ -99,7 +86,7 @@ public class HybridPasswordCracker {
     private static Iterable<String> applyRandomDigitsRealTime(String password) {
         List<String> variations = new ArrayList<>();
         for (int i = 0; i <= 9999; i++) {
-            variations.add(password + String.format("%04d", i));  // Pad numbers to ensure 4 digits
+            variations.add(password + String.format("%04d", i));
         }
         return variations;
     }
@@ -107,7 +94,7 @@ public class HybridPasswordCracker {
     private static Iterable<String> randomizeCasesRealTime(String password) {
         List<String> results = new ArrayList<>();
         int length = password.length();
-        int combinations = 1 << length;  // 2^length combinations for case changes
+        int combinations = 1 << length;
 
         for (int i = 0; i < combinations; i++) {
             StringBuilder sb = new StringBuilder(password);
@@ -125,7 +112,7 @@ public class HybridPasswordCracker {
 
     private static Iterable<String> swapLettersRealTime(String password) {
         List<String> results = new ArrayList<>();
-        results.add(password);  // Start with the original password
+        results.add(password);
 
         for (int i = 0; i < password.length(); i++) {
             int currentSize = results.size();
@@ -160,7 +147,6 @@ public class HybridPasswordCracker {
         return hash.equals(targetHash);
     }
 
-    // MD5 hash function
     private static String md5Hash(String input) throws NoSuchAlgorithmException {
         MessageDigest md = MessageDigest.getInstance("MD5");
         byte[] digest = md.digest(input.getBytes(StandardCharsets.UTF_8));
@@ -173,13 +159,15 @@ public class HybridPasswordCracker {
     }
 
     public static void main(String[] args) throws Exception {
-        Scanner stdin = new Scanner(System.in);
 
-        System.out.print("Please enter your file directory for salted passwords: ");
-        String inputFile = stdin.nextLine();
+        if (args.length == 0) {
+            System.out.println("Please provide an input file directory.");
+            return;
+        }
 
-        System.out.print("Please enter your file directory for the dictionary: ");
-        String dictionaryFile = stdin.nextLine();
+        String inputFile = args[0];
+        String dictionaryFile = "./dictionary.csv";
+        String outputFile = "task5.csv";
 
         System.out.println("Reading salted password file: " + inputFile);
         readInputFile(inputFile);
@@ -221,9 +209,8 @@ public class HybridPasswordCracker {
             results.add(future);
         }
 
-        try (PrintWriter writer = new PrintWriter(new File("task5.csv"))) {
+        try (PrintWriter writer = new PrintWriter(new File(outputFile))) {
             int successCount = 0;
-
             for (Future<String[]> result : results) {
                 String[] userResult = result.get();
                 String username = userResult[0];
@@ -249,6 +236,5 @@ public class HybridPasswordCracker {
         }
 
         executorService.shutdown();
-        stdin.close();
     }
 }

@@ -62,15 +62,17 @@ public class BruteForceCracker {
     }
 
     public static void main(String[] args) throws Exception {
-        Scanner stdin = new Scanner(System.in);
 
-        System.out.print("Please enter your file directory: ");
-        String inputFile = stdin.nextLine();
+        if (args.length == 0) {
+            System.out.println("Please provide an input file directory.");
+            return;
+        }
+
+        String inputFile = args[0];
         String outputFile = "task1.csv";
 
         System.out.println("Reading input file: " + inputFile);
         readInputFile(inputFile);
-        stdin.close();
 
         if (users.isEmpty()) {
             System.out.println("No users found in the file. Exiting.");
@@ -79,9 +81,8 @@ public class BruteForceCracker {
             System.out.println("File read successfully. Found " + users.size() + " users.");
         }
 
-      
         int availableProcessors = Runtime.getRuntime().availableProcessors();
-        int threadCount = Math.max(2, availableProcessors / 2);  
+        int threadCount = Math.max(2, availableProcessors / 2);
         System.out.println("Using " + threadCount + " threads for execution.");
 
         ExecutorService executorService = Executors.newFixedThreadPool(threadCount);
@@ -89,7 +90,6 @@ public class BruteForceCracker {
 
         long startTime = System.currentTimeMillis();
 
-  
         for (String[] user : users) {
             String username = user[0];
             String hash = user[1];
@@ -102,7 +102,6 @@ public class BruteForceCracker {
             results.add(future);
         }
 
-        
         try (PrintWriter writer = new PrintWriter(new File(outputFile))) {
             int successCount = 0;
 
@@ -129,7 +128,6 @@ public class BruteForceCracker {
         }
 
         executorService.shutdown();
- 
     }
 
 }

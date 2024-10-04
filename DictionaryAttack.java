@@ -51,13 +51,15 @@ public class DictionaryAttack {
     }
 
     public static void main(String[] args) throws Exception {
-        Scanner stdin = new Scanner(System.in);
 
-        System.out.print("Please enter your file directory for hashed passwords: ");
-        String inputFile = stdin.nextLine();
-
-        System.out.print("Please enter your file directory for the dictionary: ");
-        String dictionaryFile = stdin.nextLine();
+        if (args.length == 0) {
+            System.out.println("Please provide an input file directory.");
+            return;
+        }
+      
+        String dictionaryFile = "./dictionary.csv";
+        String inputFile = args[0];
+        String outputFile = "task2.csv";
 
         System.out.println("Reading hashed password file: " + inputFile);
         readInputFile(inputFile);
@@ -76,7 +78,7 @@ public class DictionaryAttack {
 
         System.out.println("File read successfully. Found " + users.size() + " users and " + dictionary.size() + " dictionary passwords");
 
-        try (PrintWriter writer = new PrintWriter(new File("task2.csv"))) {
+        try (PrintWriter writer = new PrintWriter(new File(outputFile))) {
             long startTime = System.currentTimeMillis();
             int successCount = 0;
 
@@ -106,7 +108,6 @@ public class DictionaryAttack {
             System.out.println("Finished cracking. Total time: " + totalTime + " seconds. Success rate: " + successRate + "%");
         }
 
-        stdin.close();
     }
 
 }
